@@ -1,44 +1,58 @@
-import fastify from "fastify";
-import path from "node:path";
+const {RecaptchaEnterpriseServiceClient} = require('@google-cloud/recaptcha-enterprise');
 
-const secretKey = "";
-const __dirname = path.resolve(path.dirname('')); 
-const app = fastify({ logger: true });
+/**
+  * Crie uma avaliação para analisar o risco de uma ação da interface.
+  *
+  * projectID: O ID do seu projeto do Google Cloud.
+  * recaptchaSiteKey: A chave reCAPTCHA associada ao site/app
+  * token: O token gerado obtido do cliente.
+  * recaptchaAction: Nome da ação correspondente ao token.
+  */
+async function createAssessment({
+  // O que fazer: substitua o token e as variáveis de ação reCAPTCHA antes de executar a amostra.
+  projectID = "projeto-seguranca-404713",
+  recaptchaKey = "6LcbywkpAAAAAGkezsl-u120vIeRPN_gJ5Jl9G_I",
+  token = "action-token",
+  recaptchaAction = "action-name",
+}) {
+  // Crie o cliente reCAPTCHA.
+  // TODO: armazena em cache o código de geração do cliente (recomendado) ou a chamada client.close() antes de sair do método.
+  const client = new RecaptchaEnterpriseServiceClient();
+  const projectPath = client.projectPath(projectID);
 
-app.register(import('@fastify/static'), {
-  root: path.join(__dirname, '/')
-})
+  // Crie a solicitação de avaliação.
+  const request = ({
+    assessment: {
+      event: {
+        token: token,
+        siteKey: recaptchaKey,
+      },
+    },
+    parent: projectPath,
+  });
 
-app.get('/', (request, reply) => {
-  reply.sendFile('index.html');
-});
+  const [ response ] = await client.createAssessment(request);
 
-app.get('/captchaTest', (req,res) =>{
-  const requestQuery = req.query["g-recaptcha-response"];
-
-  if( requestQuery != undefined && requestQuery != '' && requestQuery != null && requestQuery.response != undefined && requestQuery.response != '' && requestQuery.response != null ){
-    const response = requestQuery.response;
-    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${response}`;
-    
-    request(verificationUrl, (error, response, body) => {
-      if(error)
-        console.error(error);
-
-      body = JSON.parse(body);
-
-      if(body.success !== undefined && !body.success)
-        res.send({"responseCode" : 1,"responseDesc" : "Failed captcha verification"});
-      else
-        res.send({"responseCode" : 0,"responseDesc" : "Sucess"});
-    });
-  }else
-    res.send({"responseCode" : 1,"responseDesc" : "Failed captcha verification"});
-});
-  
-
-app.listen({port: 3124}, (err, address) => {
-  if (err) {
-    fastify.log.error(err)
-    process.exit(1)
+  // Verifique se o token é válido.
+  if (!response.tokenProperties.valid) {
+    console.log(`The CreateAssessment call failed because the token was: ${response.tokenProperties.invalidReason}`);
+    return null;
   }
-});
+
+  // Verifique se a ação esperada foi executada.
+  // The `action` property is set by user client in the grecaptcha.enterprise.execute() method.
+  if (response.tokenProperties.action === recaptchaAction) {
+    // Consulte a pontuação de risco e os motivos.
+    // Para mais informações sobre como interpretar a avaliação, acesse:
+    // https://cloud.google.com/recaptcha-enterprise/docs/interpret-assessment
+    console.log(`The reCAPTCHA score is: ${response.riskAnalysis.score}`);
+    response.riskAnalysis.reasons.forEach((reason) => {
+      console.log(reason);
+    });
+
+    return response.riskAnalysis.score;
+  } else {
+    console.log("The action attribute in your reCAPTCHA tag does not match the action you are expecting to score");
+    return null;
+  }
+}

@@ -1,18 +1,28 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Formulário</title>
   <link rel="stylesheet" type="text/css" href="index.css">
+  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LcbywkpAAAAAGkezsl-u120vIeRPN_gJ5Jl9G_I" async
+    defer></script>
+    <script type="module" src="./index.mjs"></script>
+  <script>
+    function onSubmit(token) {
+      document.getElementById("demo-form").submit();
+    }
+  </script>
 </head>
+
 <body>
   <div class="titulo">
     <h1>Formulario web</h1>
     <p id="subtitulo">Complete com as suas informações:</p>
   </div>
 
-  <form>
+  <form id="demo-form">
     <div>
       <fieldset class="fieldset">
         <label class="nnn">Nome:</label>
@@ -56,9 +66,13 @@
           </div>
         </fieldset>
 
-        <p><input type="submit" value="Cadastrar" id="entrar"></p>
+        <button class="g-recaptcha" data-sitekey="6LcbywkpAAAAAGkezsl-u120vIeRPN_gJ5Jl9G_I" data-callback='onSubmit'
+          data-action='submit'>
+          Submit
+        </button>
       </fieldset>
     </div>
   </form>
 </body>
+
 </html>
